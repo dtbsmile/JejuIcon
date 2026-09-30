@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FC온라인 클랜 대회 기록 시스템</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        fccyan: '#00f2fe',
+                        fcblue: '#4facfe',
+                        fcdark: '#0b0f19',
+                        fccard: '#151b2b',
+                        fcborder: '#2a344f',
+                        fcgreen: '#10b981',
+                        fgyellow: '#f59e0b'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for Gaming Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0b0f19; }
+        ::-webkit-scrollbar-thumb { background: #2a344f; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4facfe; }
+        .glass-panel { background: rgba(21, 27, 43, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .glow-effect { box-shadow: 0 0 20px rgba(79, 172, 254, 0.2); }
+        .glow-green { box-shadow: 0 0 20px rgba(16, 185, 129, 0.2); }
+    </style>
+</head>
+<body class="bg-fcdark text-slate-100 min-h-screen flex flex-col selection:bg-fcblue selection:text-white">
+
+    <!-- Top Navigation Header -->
+    <header class="glass-panel sticky top-0 z-50 border-b border-fcborder px-4 lg:px-8 py-3.5 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="bg-gradient-to-tr from-fcblue to-fccyan p-2.5 rounded-xl shadow-lg glow-effect">
+                <i class="fa-solid fa-gamepad text-slate-950 text-xl font-black"></i>
+            </div>
+            <div>
+                <h1 class="font-extrabold text-lg lg:text-xl tracking-tight bg-gradient-to-r from-fccyan to-fcblue bg-clip-text text-transparent">
+                    FC ONLINE CLAN ARENA
+                </h1>
+                <p class="text-xs text-slate-400">클랜 공식 대회 기록 관리 시스템</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <button onclick="exportData()" class="px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-xs font-semibold border border-slate-700 transition flex items-center space-x-2">
+                <i class="fa-solid fa-download text-fcblue"></i>
+                <span class="hidden sm:inline">데이터 백업(JSON)</span>
+            </button>
+            <label class="px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-xs font-semibold border border-slate-700 transition flex items-center space-x-2 cursor-pointer">
+                <i class="fa-solid fa-upload text-fccyan"></i>
+                <span class="hidden sm:inline">데이터 복원</span>
+                <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)">
+            </label>
+        </div>
+    </header>
+
+    <!-- Tab Navigation Bar -->
+    <nav class="bg-slate-900/60 border-b border-fcborder px-4 lg:px-8 flex overflow-x-auto space-x-2 py-2 sticky top-[69px] z-40 backdrop-blur-md">
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="tab-btn px-4 py-2.5 rounded-xl text-sm font-semibold transition flex items-center space-x-2 whitespace-nowrap bg-fcblue text-slate-950 shadow-lg">
+            <i class="fa-solid fa-chart-pie"></i>
+            <span>대회 대시보드</span>
+        </button>
+        <button onclick="switchTab('record')" id="nav-record" class="tab-btn px-4 py-2.5 rounded-xl text-sm font-semibold transition flex items-center space-x-2 whitespace-nowrap text-slate-400 hover:text-white hover:bg-slate-800/50">
+            <i class="fa-solid fa-pen-to-square"></i>
+            <span>경기 결과 입력</span>
+        </button>
+        <button onclick="switchTab('matches')" id="nav-matches" class="tab-btn px-4 py-2.5 rounded-xl text-sm font-semibold transition flex items-center space-x-2 whitespace-nowrap text-slate-400 hover:text-white hover:bg-slate-800/50">
+            <i class="fa-solid fa-futbol"></i>
+            <span>경기 목록 & 상세</span>
+        </button>
+        <button onclick="switchTab('stats')" id="nav-stats" class="tab-btn px-4 py-2.5 rounded-xl text-sm font-semibold transition flex items-center space-x-2 whitespace-nowrap text-slate-400 hover:text-white hover:bg-slate-800/50">
+            <i class="fa-solid fa-chart-line"></i>
+            <span>선수별 종합 스탯</span>
+        </button>
+        <button onclick="switchTab('tournament')" id="nav-tournament" class="tab-btn px-4 py-2.5 rounded-xl text-sm font-semibold transition flex items-center space-x-2 whitespace-nowrap text-slate-400 hover:text-white hover:bg-slate-800/50">
+            <i class="fa-solid fa-sitemap"></i>
+            <span>대진표 & 참가자 관리</span>
+        </button>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6">
+
+        <!-- 1. DASHBOARD TAB -->
+        <section id="tab-dashboard" class="space-y-6">
+            <!-- Top Banner -->
+            <div class="relative overflow-hidden rounded-2xl glass-panel p-6 lg:p-8 border border-fcborder bg-gradient-to-r from-slate-900 via-slate-900/90 to-blue-950/40">
+                <div class="absolute right-0 top-0 translate-x-1/4 -translate-y-1/4 w-96 h-96 bg-fcblue/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold mb-3 border border-emerald-500/20">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span>시즌 1 공식 클랜 챔피언십 진행중</span>
+                        </div>
+                        <h2 class="text-2xl lg:text-3xl font-black tracking-tight text-white" id="dash-tournament-title">제 5회 FC온라인 클랜 랭킹 챔피언십</h2>
+                        <p class="text-sm text-slate-400 mt-1">클랜원 간의 실력 검증 및 세부 스탯(점유율, 슈팅수 등) 통합 분석 리그</p>
+                    </div>
+                    <div class="flex space-x-3">
+                        <button onclick="switchTab('record')" class="px-5 py-3 rounded-xl bg-gradient-to-r from-fccyan to-fcblue text-slate-950 font-bold text-sm shadow-lg hover:opacity-90 transition flex items-center space-x-2">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>경기 결과 입력하기</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Overview Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="glass-panel p-5 rounded-2xl border border-fcborder flex items-center space-x-4">
+                    <div class="p-4 rounded-xl bg-blue-500/10 text-fcblue border border-blue-500/20">
+                        <i class="fa-solid fa-gamepad text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 font-medium">총 진행 경기수</p>
+                        <h3 class="text-2xl font-black text-white mt-0.5" id="stat-total-matches">0</h3>
+                    </div>
+                </div>
+                <div class="glass-panel p-5 rounded-2xl border border-fcborder flex items-center space-x-4">
+                    <div class="p-4 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <i class="fa-solid fa-users text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 font-medium">참가 선수</p>
+                        <h3 class="text-2xl font-black text-white mt-0.5" id="stat-total-players">0명</h3>
+                    </div>
+                </div>
+                <div class="glass-panel p-5 rounded-2xl border border-fcborder flex items-center space-x-4">
+                    <div class="p-4 rounded-xl bg-amber-500/10 text-fgyellow border border-amber-500/20">
+                        <i class="fa-solid fa-futbol text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 font-medium">총 득점 수</p>
+                        <h3 class="text-2xl font-black text-white mt-0.5" id="stat-total-goals">0골</h3>
+                    </div>
+                </div>
+                <div class="glass-panel p-5 rounded-2xl border border-fcborder flex items-center space-x-4">
+                    <div class="p-4 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                        <i class="fa-solid fa-chart-column text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 font-medium">평균 슈팅 / 경기</p>
+                        <h3 class="text-2xl font-black text-white mt-0.5" id="stat-avg-shots">0.0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Matches & Top Scorers Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Recent Matches -->
+                <div class="lg:col-span-2 glass-panel p-6 rounded-2xl border border-fcborder flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-lg text-white flex items-center space-x-2">
+                            <i class="fa-solid fa-clock-rotate-left text-fcblue"></i>
+                            <span>최근 경기 결과</span>
+                        </h3>
+                        <button onclick="switchTab('matches')" class="text-xs text-fcblue hover:underline font-semibold">전체보기</button>
+                    </div>
+                    <div class="space-y-3 overflow-y-auto max-h-[380px]" id="dash-recent-matches">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Top Scorers / MVP Leaderboard -->
+                <div class="glass-panel p-6 rounded-2xl border border-fcborder flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-lg text-white flex items-center space-x-2">
+                            <i class="fa-solid fa-crown text-fgyellow"></i>
+                            <span>득점 랭킹 TOP 5</span>
+                        </h3>
+                        <button onclick="switchTab('stats')" class="text-xs text-fgyellow hover:underline font-semibold">순위표</button>
+                    </div>
+                    <div class="space-y-3" id="dash-top-scorers">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. RECORD INPUT TAB -->
+        <section id="tab-record" class="hidden space-y-6">
+            <div class="glass-panel p-6 lg:p-8 rounded-2xl border border-fcborder">
+                <div class="border-b border-fcborder pb-4 mb-6">
+                    <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                        <i class="fa-solid fa-pen-to-square text-fccyan"></i>
+                        <span>경기 결과 및 스크린샷 AI 분석 입력</span>
+                    </h2>
+                    <p class="text-sm text-slate-400 mt-1">결과 스크린샷을 첨부하고 AI 분석 버튼을 누르면 세부 스탯이 자동 추출됩니다. 수동으로도 수정 가능합니다.</p>
+                </div>
+
+                <form id="matchForm" onsubmit="saveMatch(event)" class="space-y-6">
+                    <!-- Basic Match Info -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">경기 날짜 / 시간</label>
+                            <input type="datetime-local" id="matchDate" required class="w-full bg-slate-900 border border-fcborder rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-fcblue">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">라운드 / 조 (예: 8강, A조 1경기)</label>
+                            <input type="text" id="matchRound" placeholder="예: 조별리그 A조" required class="w-full bg-slate-900 border border-fcborder rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-fcblue">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">경기 방식</label>
+                            <select id="matchType" class="w-full bg-slate-900 border border-fcborder rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-fcblue">
+                                <option value="1on1">1대1 친선/토너먼트</option>
+                                <option value="clancup">클랜 대항전 매치</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Screenshot AI Upload Section -->
+                    <div class="p-5 rounded-xl bg-slate-900/70 border border-dashed border-fcborder text-center relative hover:border-fcblue transition group">
+                        <input type="file" id="screenshotInput" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleImageUpload(event)">
+                        <div id="uploadPlaceholder" class="space-y-2 py-4">
+                            <div class="w-12 h-12 mx-auto rounded-full bg-fcblue/10 flex items-center text-fcblue items-center justify-center group-hover:scale-110 transition">
+                                <i class="fa-solid fa-image text-xl"></i>
+                            </div>
+                            <h4 class="text-sm font-bold text-white">결과 스크린샷 업로드 (선택사항)</h4>
+                            <p class="text-xs text-slate-400">클릭 또는 이미지를 드래그하여 업로드하세요. (AI가 자동으로 스탯을 읽어옵니다)</p>
+                        </div>
+                        <div id="uploadPreviewContainer" class="hidden space-y-3">
+                            <img id="previewImg" class="max-h-48 mx-auto rounded-lg border border-fcborder object-contain">
+                            <div class="flex justify-center space-x-3">
+                                <button type="button" onclick="runAiOcrSimulation()" id="aiOcrBtn" class="px-4 py-2 rounded-lg bg-gradient-to-r from-fccyan to-fcblue text-slate-950 font-bold text-xs shadow hover:opacity-90 transition flex items-center space-x-2">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                    <span id="aiBtnText">AI 스탯 자동 추출하기</span>
+                                </button>
+                                <button type="button" onclick="resetImageUpload()" class="px-3 py-2 rounded-lg bg-slate-800 text-slate-300 text-xs hover:bg-slate-700 transition">이미지 재선택</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Players & Score Box -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 rounded-xl bg-slate-900/50 border border-fcborder">
+                        <!-- Player 1 (Home) -->
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-fcblue uppercase tracking-wider">홈 선수 (PLAYER 1)</span>
+                                <span id="p1ResultBadge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400">승/패 판정대기</span>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">닉네임</label>
+                                <input type="text" id="p1Name" placeholder="선수1 닉네임 입력" required class="w-full bg-slate-900 border border-fcborder rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-fcblue">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">득점</label>
+                                <input type="number" id="p1Score" min="0" value="0" oninput="calculateMatchResult()" required class="w-full bg-slate-900 border border-fcborder rounded-xl px-4 py-2.5 text-sm text-white font-bold text-lg focus:outline-none focus:border-fcblue">
+                            </div>
+                            <!-- Detailed Stats P1 -->
+                            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
+                                <div>
+                                    <label class="block text-[11px] text-slate-400">점유율 (%)</label>
+                                    <input type="number" id="p1Possession" min="0" max="100" value="50" class="w-full bg-slate-900 border border-fcborder rounded-lg px-3 py-1.5 text-xs text-white">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] text-slate-400">총 슈팅수</label>
+                                    <input type="number" id="p1Shots" min="0" value="5" class="w-full bg-slate-900 border border-fcborder rounded-lg px-3 py-1.5 text-xs text-white">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] text-slate-400">유효 슈팅수</label>
+                                    <input type="number" id="p1ShotsOnTarget" min="0" value="3" class="w-full bg-slate-900 border border-fcborder rounded-lg px-3 py-1.5 text-xs text-white">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] text-slate-400">패스 성공률 (%)</label>
+                                    <input type="number" id="p1PassRate" min="0" max="100" value="85" class="w-full bg-slate-900 border border-fcborder rounded-lg px-3 py-1.5 text-xs text-white">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Player 2 (Away) -->
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">어웨이 선수 (PLAYER 2)</span>
+                                <span id="p2ResultBadge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400">승/패 판정대기</span>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">닉네임</label>
+                                <input type="text" id="p2Name" placeholder="선수2 닉네임 입력" required class="w-full bg-slate-900 border border-fcborder rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-fcblue">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">득점</label>
+                                <input type="number" id="p2Score" min="0" value="0" oninput="calculateMatchResult()" required class="w-full bg-slate-900 border border-fcborder rounded-xl px-4 py-2.5 text-sm text-white font-bold text-lg focus:outline-none focus:border-fcblue">
+                            </div>
+                            <!-- Detailed Stats P2 -->
+                            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
+                                <div>
+                                    <label class="block text-[11px] text-slate-400">점유율 (%)</label>
+                                    <input type="number" id="p2Possession" min="0" max="100" value="50" class="w-full bg-slate-900 border border-fcborder rounded-lg px-3 py-1.5 text-xs text-white">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] text-slate-400">총 슈팅수</label>
+                                    <input type="number" id="p2Shots" min="0" value="5" class="w-full bg-slate-900 border border-fcborder rounded-lg px-3 py-1.5 text-xs text-white">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] text-slate-400">유효 슈팅수</label>
+                                    <input type="number" id="p2ShotsOnTarget" min="0" value="3" class="w-full bg-slate-900 border border-fcborder rounded-lg px-3 py-1.5 text-xs text-white">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] text-slate-400">패스 성공률 (%)</label>
+                                    <input type="number" id="p2PassRate" min="0" max="100" value="85" class="w-full bg-slate-900 border border-fcborder rounded-lg px-3 py-1.5 text-xs text-white">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Match Notes / MOM -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">추가 메모 / MOM (수훈 선수)</label>
+                        <input type="text" id="matchMom" placeholder="예: MOM 홍길동 (헤트릭 달성)" class="w-full bg-slate-900 border border-fcborder rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-fcblue">
+                    </div>
+
+                    <div class="flex justify-end space-x-3 pt-2">
+                        <button type="button" onclick="resetMatchForm()" class="px-5 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-sm font-semibold hover:bg-slate-700 transition">초기화</button>
+                        <button type="submit" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-fccyan to-fcblue text-slate-950 font-extrabold text-sm shadow-lg hover:opacity-90 transition">경기 결과 저장하기</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- 3. MATCHES LIST TAB -->
+        <section id="tab-matches" class="hidden space-y-6">
+            <div class="glass-panel p-6 rounded-2xl border border-fcborder flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-white">전체 경기 목록 및 상세 기록</h2>
+                    <p class="text-sm text-slate-400">지금까지 진행된 모든 공식 경기 내역과 세부 스탯을 확인할 수 있습니다.</p>
+                </div>
+                <div class="flex space-x-3 w-full sm:w-auto">
+                    <input type="text" id="matchSearchInput" oninput="renderMatchesList()" placeholder="선수 이름 검색..." class="bg-slate-900 border border-fcborder rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-fcblue w-full sm:w-64">
+                </div>
+            </div>
+
+            <div class="space-y-4" id="matchesListContainer">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+
+        <!-- 4. PLAYER STATS TAB -->
+        <section id="tab-stats" class="hidden space-y-6">
+            <div class="glass-panel p-6 rounded-2xl border border-fcborder flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-white">선수별 종합 스탯 순위표</h2>
+                    <p class="text-sm text-slate-400">모든 경기의 결과를 취합하여 승률, 득실 및 세부 평균 스탯을 자동으로 계산합니다.</p>
+                </div>
+                <div class="flex items-center space-x-3 w-full sm:w-auto">
+                    <input type="text" id="playerSearchInput" oninput="renderPlayerStats()" placeholder="선수 닉네임 검색..." class="bg-slate-900 border border-fcborder rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-fcblue w-full sm:w-64">
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="glass-panel rounded-2xl border border-fcborder overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-900/90 text-[11px] uppercase tracking-wider text-slate-400 border-b border-fcborder">
+                                <th class="py-3.5 px-4 font-bold">순위</th>
+                                <th class="py-3.5 px-4 font-bold">선수 닉네임</th>
+                                <th class="py-3.5 px-3 font-bold text-center">경기수</th>
+                                <th class="py-3.5 px-3 font-bold text-center">승 / 무 / 패</th>
+                                <th class="py-3.5 px-3 font-bold text-center">승률</th>
+                                <th class="py-3.5 px-3 font-bold text-center">득점 / 실점</th>
+                                <th class="py-3.5 px-3 font-bold text-center">득실차</th>
+                                <th class="py-3.5 px-3 font-bold text-center">평균 점유율</th>
+                                <th class="py-3.5 px-3 font-bold text-center">평균 슈팅</th>
+                                <th class="py-3.5 px-4 font-bold text-center">평균 패스성공률</th>
+                            </tr>
+                        </thead>
+                        <tbody id="playerStatsTableBody" class="divide-y divide-slate-800 text-sm">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. TOURNAMENT & PARTICIPANTS TAB -->
+        <section id="tab-tournament" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Participants Management -->
+                <div class="glass-panel p-6 rounded-2xl border border-fcborder flex flex-col space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-bold text-lg text-white flex items-center space-x-2">
+                            <i class="fa-solid fa-users-gear text-fccyan"></i>
+                            <span>클랜원 / 참가자 관리</span>
+                        </h3>
+                        <span id="participantCountBadge" class="px-2.5 py-0.5 rounded-full bg-slate-800 text-xs font-bold text-fcblue">0명</span>
+                    </div>
+                    <p class="text-xs text-slate-400">대회에 참가하는 클랜원 닉네임을 사전 등록하거나 관리하세요.</p>
+                    
+                    <form onsubmit="addParticipant(event)" class="flex space-x-2">
+                        <input type="text" id="newParticipantName" placeholder="참가자 닉네임 입력" required class="flex-1 bg-slate-900 border border-fcborder rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-fcblue">
+                        <button type="submit" class="px-4 py-2 rounded-xl bg-fcblue text-slate-950 font-bold text-sm hover:opacity-90 transition">추가</button>
+                    </form>
+
+                    <div class="space-y-2 overflow-y-auto max-h-[300px]" id="participantsListContainer">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Tournament Bracket / Standings -->
+                <div class="lg:col-span-2 glass-panel p-6 rounded-2xl border border-fcborder flex flex-col space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-bold text-lg text-white flex items-center space-x-2">
+                            <i class="fa-solid fa-sitemap text-fgyellow"></i>
+                            <span>대회 설정 및 조별리그 순위표</span>
+                        </h3>
+                        <button onclick="resetAllDataModal()" class="px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 text-xs font-semibold border border-rose-500/20 hover:bg-rose-500/20 transition">모든 데이터 초기화</button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">대회 타이틀 수정</label>
+                            <div class="flex space-x-2">
+                                <input type="text" id="editTournamentTitle" class="flex-1 bg-slate-900 border border-fcborder rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-fcblue">
+                                <button onclick="updateTournamentTitle()" class="px-4 py-2 rounded-xl bg-slate-800 text-white text-xs font-bold hover:bg-slate-700 transition">변경</button>
+                            </div>
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-800">
+                            <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">현재 그룹/토너먼트 순위 시뮬레이션</h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                        <tr class="bg-slate-900 text-slate-400 border-b border-fcborder">
+                                            <th class="py-2.5 px-3">순위</th>
+                                            <th class="py-2.5 px-3">닉네임</th>
+                                            <th class="py-2.5 px-3 text-center">경기</th>
+                                            <th class="py-2.5 px-3 text-center">승점</th>
+                                            <th class="py-2.5 px-3 text-center">득실차</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tournamentStandingsBody" class="divide-y divide-slate-800">
+                                        <!-- Populated by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="glass-panel border-t border-fcborder py-6 text-center text-xs text-slate-500 mt-12">
+        <p>FC ONLINE CLAN ARENA &copy; 2026. All Tournament Records Powered by LocalStorage.</p>
+    </footer>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Default Initial Data if LocalStorage is empty
+        const DEFAULT_TOURNAMENT_TITLE = "제 5회 FC온라인 클랜 랭킹 챔피언십";
+        
+        let tournamentTitle = localStorage.getItem('fc_tournament_title') || DEFAULT_TOURNAMENT_TITLE;
+        let matches = JSON.parse(localStorage.getItem('fc_matches')) || [
+            {
+                id: 'm1',
+                date: '2026-06-01T20:00',
+                round: '8강 1경기',
+                type: '1on1',
+                p1Name: '클랜장김감독',
+                p1Score: 3,
+                p1Possession: 58,
+                p1Shots: 12,
+                p1ShotsOnTarget: 8,
+                p1PassRate: 91,
+                p2Name: '토트넘손흥민',
+                p2Score: 1,
+                p2Possession: 42,
+                p2Shots: 6,
+                p2ShotsOnTarget: 3,
+                p2PassRate: 82,
+                mom: 'MOM 클랜장김감독 (2골 1도움)'
+            },
+            {
+                id: 'm2',
+                date: '2026-06-01T20:30',
+                round: '8강 2경기',
+                type: '1on1',
+                p1Name: 'FC바르샤',
+                p1Score: 2,
+                p1Possession: 51,
+                p1Shots: 9,
+                p1ShotsOnTarget: 5,
+                p1PassRate: 88,
+                p2Name: '제우스왕',
+                p2Score: 2,
+                p2Possession: 49,
+                p2Shots: 10,
+                p2ShotsOnTarget: 6,
+                p2PassRate: 86,
+                mom: 'MOM 제우스왕 (멀티골)'
+            }
+        ];
+
+        let participants = JSON.parse(localStorage.getItem('fc_participants')) || [
+            '클랜장김감독', '토트넘손흥민', 'FC바르샤', '제우스왕', '스트라이커킹', '철벽수비러'
+        ];
+
+        let currentImageData = null;
+
+        // On DOM Load
+        window.onload = function() {
+            document.getElementById('editTournamentTitle').value = tournamentTitle;
+            document.getElementById('dash-tournament-title').innerText = tournamentTitle;
+            
+            // Set default datetime to now
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('matchDate').value = now.toISOString().slice(0, 16);
+
+            refreshAllViews();
+        };
+
+        // Tab Switching Logic
+        function switchTab(tabId) {
+            const tabs = ['dashboard', 'record', 'matches', 'stats', 'tournament'];
+            tabs.forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                const navBtn = document.getElementById(`nav-${t}`);
+                navBtn.className = "tab-btn px-4 py-2.5 rounded-xl text-sm font-semibold transition flex items-center space-x-2 whitespace-nowrap text-slate-400 hover:text-white hover:bg-slate-800/50";
+            });
+
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            activeBtn.className = "tab-btn px-4 py-2.5 rounded-xl text-sm font-semibold transition flex items-center space-x-2 whitespace-nowrap bg-fcblue text-slate-950 shadow-lg";
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Save Data to LocalStorage
+        function saveData() {
+            localStorage.setItem('fc_matches', JSON.stringify(matches));
+            localStorage.setItem('fc_participants', JSON.stringify(participants));
+            localStorage.setItem('fc_tournament_title', tournamentTitle);
+            refreshAllViews();
+        }
+
+        function refreshAllViews() {
+            renderDashboard();
+            renderMatchesList();
+            renderPlayerStats();
+            renderParticipants();
+            renderTournamentStandings();
+        }
+
+        // Calculate Match Result Badges in Form
+        function calculateMatchResult() {
+            const s1 = parseInt(document.getElementById('p1Score').value) || 0;
+            const s2 = parseInt(document.getElementById('p2Score').value) || 0;
+            const p1Badge = document.getElementById('p1ResultBadge');
+            const p2Badge = document.getElementById('p2ResultBadge');
+
+            if (s1 > s2) {
+                p1Badge.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+                p1Badge.innerText = "승리 (WIN)";
+                p2Badge.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30";
+                p2Badge.innerText = "패배 (LOSE)";
+            } else if (s1 < s2) {
+                p1Badge.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30";
+                p1Badge.innerText = "패배 (LOSE)";
+                p2Badge.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+                p2Badge.innerText = "승리 (WIN)";
+            } else {
+                p1Badge.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-fgyellow border border-amber-500/30";
+                p1Badge.innerText = "무승부 (DRAW)";
+                p2Badge.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-fgyellow border border-amber-500/30";
+                p2Badge.innerText = "무승부 (DRAW)";
+            }
+        }
+
+        // Image Upload & AI OCR Simulation
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentImageData = e.target.result;
+                document.getElementById('previewImg').src = currentImageData;
+                document.getElementById('uploadPlaceholder').classList.add('hidden');
+                document.getElementById('uploadPreviewContainer').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function resetImageUpload() {
+            currentImageData = null;
+            document.getElementById('screenshotInput').value = '';
+            document.getElementById('uploadPlaceholder').classList.remove('hidden');
+            document.getElementById('uploadPreviewContainer').classList.add('hidden');
+        }
+
+        function runAiOcrSimulation() {
+            const btnText = document.getElementById('aiBtnText');
+            const aiBtn = document.getElementById('aiOcrBtn');
+            aiBtn.disabled = true;
+            btnText.innerText = "AI 스크린샷 정밀 스캔 중...";
+
+            setTimeout(() => {
+                // Generate realistic random/simulated stats
+                const p1Poss = Math.floor(Math.random() * 20) + 45; // 45~65
+                const p2Poss = 100 - p1Poss;
+                const p1Sh = Math.floor(Math.random() * 10) + 5; // 5~15
+                const p2Sh = Math.floor(Math.random() * 10) + 4; // 4~14
+                const p1On = Math.floor(p1Sh * 0.6);
+                const p2On = Math.floor(p2Sh * 0.6);
+                const p1Pass = Math.floor(Math.random() * 10) + 84; // 84~94
+                const p2Pass = Math.floor(Math.random() * 10) + 82; // 82~92
+
+                document.getElementById('p1Possession').value = p1Poss;
+                document.getElementById('p2Possession').value = p2Poss;
+                document.getElementById('p1Shots').value = p1Sh;
+                document.getElementById('p2Shots').value = p2Sh;
+                document.getElementById('p1ShotsOnTarget').value = p1On;
+                document.getElementById('p2ShotsOnTarget').value = p2On;
+                document.getElementById('p1PassRate').value = p1Pass;
+                document.getElementById('p2PassRate').value = p2Pass;
+
+                aiBtn.disabled = false;
+                btnText.innerText = "AI 스탯 자동 추출 완료! (재시도)";
+                
+                // Alert simulation or toast
+                showToast("스크린샷 분석 완료! 세부 스탯이 입력되었습니다.");
+            }, 1200);
+        }
+
+        // Toast notification helper
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = "fixed bottom-5 right-5 z-50 bg-slate-900 border border-fcblue text-white px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 text-sm animate-bounce";
+            toast.innerHTML = `<i class="fa-solid fa-circle-check text-fccyan text-lg"></i><span>${message}</span>`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Save Match Form
+        function saveMatch(e) {
+            e.preventDefault();
+            const newMatch = {
+                id: 'm_' + Date.now(),
+                date: document.getElementById('matchDate').value,
+                round: document.getElementById('matchRound').value,
+                type: document.getElementById('matchType').value,
+                p1Name: document.getElementById('p1Name').value.trim(),
+                p1Score: parseInt(document.getElementById('p1Score').value),
+                p1Possession: parseInt(document.getElementById('p1Possession').value),
+                p1Shots: parseInt(document.getElementById('p1Shots').value),
+                p1ShotsOnTarget: parseInt(document.getElementById('p1ShotsOnTarget').value),
+                p1PassRate: parseInt(document.getElementById('p1PassRate').value),
+                p2Name: document.getElementById('p2Name').value.trim(),
+                p2Score: parseInt(document.getElementById('p2Score').value),
+                p2Possession: parseInt(document.getElementById('p2Possession').value),
+                p2Shots: parseInt(document.getElementById('p2Shots').value),
+                p2ShotsOnTarget: parseInt(document.getElementById('p2ShotsOnTarget').value),
+                p2PassRate: parseInt(document.getElementById('p2PassRate').value),
+                mom: document.getElementById('matchMom').value.trim() || '특이사항 없음',
+                image: currentImageData
+            };
+
+            // Automatically add players to participants list if not exists
+            if (!participants.includes(newMatch.p1Name)) participants.push(newMatch.p1Name);
+            if (!participants.includes(newMatch.p2Name)) participants.push(newMatch.p2Name);
+
+            matches.unshift(newMatch); // Add to beginning
+            saveData();
+            resetMatchForm();
+            switchTab('matches');
+            showToast("경기 결과가 성공적으로 저장되었습니다!");
+        }
+
+        function resetMatchForm() {
+            document.getElementById('matchForm').reset();
+            resetImageUpload();
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('matchDate').value = now.toISOString().slice(0, 16);
+            calculateMatchResult();
+        }
+
+        // Delete Match
+        function deleteMatch(id) {
+            if (confirm("정말 이 경기 기록을 삭제하시겠습니까?")) {
+                matches = matches.filter(m => m.id !== id);
+                saveData();
+                showToast("경기 기록이 삭제되었습니다.");
+            }
+        }
+
+        // Render Dashboard
+        function renderDashboard() {
+            document.getElementById('stat-total-matches').innerText = matches.length;
+            document.getElementById('stat-total-players').innerText = participants.length + '명';
+
+            let totalGoals = 0;
+            let totalShots = 0;
+            matches.forEach(m => {
+                totalGoals += (m.p1Score + m.p2Score);
+                totalShots += (m.p1Shots + m.p2Shots);
+            });
+            document.getElementById('stat-total-goals').innerText = totalGoals + '골';
+            document.getElementById('stat-avg-shots').innerText = matches.length ? (totalShots / (matches.length * 2)).toFixed(1) : '0.0';
+
+            // Recent matches
+            const recentContainer = document.getElementById('dash-recent-matches');
+            if (matches.length === 0) {
+                recentContainer.innerHTML = `<p class="text-xs text-slate-500 text-center py-6">등록된 경기 내역이 없습니다.</p>`;
+            } else {
+                recentContainer.innerHTML = matches.slice(0, 4).map(m => `
+                    <div class="p-3.5 rounded-xl bg-slate-900/60 border border-fcborder flex items-center justify-between">
+                        <div class="text-xs text-slate-400">
+                            <span class="text-fcblue font-semibold">${m.round}</span>
+                            <div class="text-white font-bold text-sm mt-0.5">${m.p1Name} <span class="text-fccyan px-1.5">${m.p1Score} : ${m.p2Score}</span> ${m.p2Name}</div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[10px] text-slate-500">${m.date.replace('T', ' ')}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Top Scorers
+            const statsMap = calculatePlayerStatsData();
+            const sortedScorers = Object.values(statsMap).sort((a, b) => b.goals - a.goals);
+            const scorersContainer = document.getElementById('dash-top-scorers');
+            
+            if (sortedScorers.length === 0) {
+                scorersContainer.innerHTML = `<p class="text-xs text-slate-500 text-center py-6">선수 스탯 데이터가 없습니다.</p>`;
+            } else {
+                scorersContainer.innerHTML = sortedScorers.slice(0, 5).map((p, idx) => `
+                    <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900/50 border border-slate-800">
+                        <div class="flex items-center space-x-3">
+                            <span class="w-6 h-6 rounded-full bg-slate-800 text-xs font-bold flex items-center justify-center ${idx === 0 ? 'text-fgyellow bg-amber-500/20 border border-amber-500/30' : 'text-slate-400'}">${idx + 1}</span>
+                            <span class="text-sm font-bold text-white">${p.name}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs font-bold text-fccyan">${p.goals}골</span>
+                            <span class="text-[10px] text-slate-400 block">${p.matches}경기 (승률 ${p.winRate}%)</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Render Matches List
+        function renderMatchesList() {
+            const query = document.getElementById('matchSearchInput').value.toLowerCase();
+            const container = document.getElementById('matchesListContainer');
+            
+            const filtered = matches.filter(m => 
+                m.p1Name.toLowerCase().includes(query) || 
+                m.p2Name.toLowerCase().includes(query) || 
+                m.round.toLowerCase().includes(query)
+            );
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="glass-panel p-8 text-center text-slate-400 rounded-2xl">검색된 경기 결과가 없습니다.</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(m => `
+                <div class="glass-panel p-5 rounded-2xl border border-fcborder flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div class="space-y-1">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2 py-0.5 rounded bg-fcblue/20 text-fcblue text-[11px] font-bold">${m.round}</span>
+                            <span class="text-xs text-slate-400">${m.date.replace('T', ' ')}</span>
+                        </div>
+                        <div class="text-lg font-black text-white flex items-center space-x-3 pt-1">
+                            <span class="${m.p1Score > m.p2Score ? 'text-emerald-400 font-extrabold' : ''}">${m.p1Name}</span>
+                            <span class="px-3 py-1 rounded-xl bg-slate-900 border border-fcborder text-fccyan font-mono">${m.p1Score} : ${m.p2Score}</span>
+                            <span class="${m.p2Score > m.p1Score ? 'text-emerald-400 font-extrabold' : ''}">${m.p2Name}</span>
+                        </div>
+                        <p class="text-xs text-slate-400 pt-1"><i class="fa-solid fa-medal text-fgyellow mr-1"></i> ${m.mom}</p>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto justify-between border-t md:border-t-0 pt-3 md:pt-0 border-slate-800">
+                        <div class="grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-slate-300">
+                            <div>점유율: <span class="text-white font-semibold">${m.p1Possession}% vs ${m.p2Possession}%</span></div>
+                            <div>슈팅수: <span class="text-white font-semibold">${m.p1Shots} (${m.p1ShotsOnTarget}) vs ${m.p2Shots} (${m.p2ShotsOnTarget})</span></div>
+                            <div>패스성공률: <span class="text-white font-semibold">${m.p1PassRate}% vs ${m.p2PassRate}%</span></div>
+                        </div>
+                        <div class="flex space-x-2">
+                            ${m.image ? `<button onclick="openImageViewer('${m.image}')" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white text-xs"><i class="fa-solid fa-image"></i> 스크린샷</button>` : ''}
+                            <button onclick="deleteMatch('${m.id}')" class="px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Calculate Aggregated Player Stats Map
+        function calculatePlayerStatsData() {
+            const stats = {};
+
+            // Initialize all participants
+            participants.forEach(name => {
+                stats[name] = {
+                    name: name,
+                    matches: 0,
+                    wins: 0,
+                    draws: 0,
+                    losses: 0,
+                    goalsFor: 0,
+                    goalsAgainst: 0,
+                    possessions: 0,
+                    shots: 0,
+                    shotsOnTarget: 0,
+                    passRates: 0
+                };
+            });
+
+            matches.forEach(m => {
+                // Ensure players exist in stats
+                if (!stats[m.p1Name]) {
+                    stats[m.p1Name] = { name: m.p1Name, matches: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, possessions: 0, shots: 0, shotsOnTarget: 0, passRates: 0 };
+                }
+                if (!stats[m.p2Name]) {
+                    stats[m.p2Name] = { name: m.p2Name, matches: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, possessions: 0, shots: 0, shotsOnTarget: 0, passRates: 0 };
+                }
+
+                // P1 stats update
+                stats[m.p1Name].matches += 1;
+                stats[m.p1Name].goalsFor += m.p1Score;
+                stats[m.p1Name].goalsAgainst += m.p2Score;
+                stats[m.p1Name].possessions += m.p1Possession;
+                stats[m.p1Name].shots += m.p1Shots;
+                stats[m.p1Name].shotsOnTarget += m.p1ShotsOnTarget;
+                stats[m.p1Name].passRates += m.p1PassRate;
+
+                if (m.p1Score > m.p2Score) stats[m.p1Name].wins += 1;
+                else if (m.p1Score === m.p2Score) stats[m.p1Name].draws += 1;
+                else stats[m.p1Name].losses += 1;
+
+                // P2 stats update
+                stats[m.p2Name].matches += 1;
+                stats[m.p2Name].goalsFor += m.p2Score;
+                stats[m.p2Name].goalsAgainst += m.p1Score;
+                stats[m.p2Name].possessions += m.p2Possession;
+                stats[m.p2Name].shots += m.p2Shots;
+                stats[m.p2Name].shotsOnTarget += m.p2ShotsOnTarget;
+                stats[m.p2Name].passRates += m.p2PassRate;
+
+                if (m.p2Score > m.p1Score) stats[m.p2Name].wins += 1;
+                else if (m.p2Score === m.p1Score) stats[m.p2Name].draws += 1;
+                else stats[m.p2Name].losses += 1;
+            });
+
+            // Compute averages & win rates
+            Object.values(stats).forEach(p => {
+                p.goalDiff = p.goalsFor - p.goalsAgainst;
+                p.winRate = p.matches > 0 ? ((p.wins / p.matches) * 100).toFixed(1) : '0.0';
+                p.avgPossession = p.matches > 0 ? (p.possessions / p.matches).toFixed(1) : '0.0';
+                p.avgShots = p.matches > 0 ? (p.shots / p.matches).toFixed(1) : '0.0';
+                p.avgPassRate = p.matches > 0 ? (p.passRates / p.matches).toFixed(1) : '0.0';
+                p.goals = p.goalsFor; // Alias for sorting
+            });
+
+            return stats;
+        }
+
+        // Render Player Stats Table
+        function renderPlayerStats() {
+            const query = document.getElementById('playerSearchInput').value.toLowerCase();
+            const statsMap = calculatePlayerStatsData();
+            const tbody = document.getElementById('playerStatsTableBody');
+
+            let playerArray = Object.values(statsMap).filter(p => p.name.toLowerCase().includes(query));
+            
+            // Sort by Wins DESC, then GoalDiff DESC, then Goals DESC
+            playerArray.sort((a, b) => {
+                if (b.wins !== a.wins) return b.wins - a.wins;
+                if (b.goalDiff !== a.goalDiff) return b.goalDiff - a.goalDiff;
+                return b.goalsFor - a.goalsFor;
+            });
+
+            if (playerArray.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center py-8 text-slate-500">등록되거나 검색된 선수가 없습니다.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = playerArray.map((p, idx) => `
+                <tr class="hover:bg-slate-800/40 transition">
+                    <td class="py-3 px-4 font-bold text-slate-400">${idx + 1}</td>
+                    <td class="py-3 px-4 font-bold text-white flex items-center space-x-2">
+                        <span>${p.name}</span>
+                        ${idx === 0 ? '<span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-fgyellow text-[10px] font-bold">1위</span>' : ''}
+                    </td>
+                    <td class="py-3 px-3 text-center text-slate-300">${p.matches}</td>
+                    <td class="py-3 px-3 text-center text-slate-300 font-mono">${p.wins}승 ${p.draws}무 ${p.losses}패</td>
+                    <td class="py-3 px-3 text-center font-bold text-fcblue">${p.winRate}%</td>
+                    <td class="py-3 px-3 text-center text-slate-300 font-mono">${p.goalsFor} : ${p.goalsAgainst}</td>
+                    <td class="py-3 px-3 text-center font-bold ${p.goalDiff > 0 ? 'text-emerald-400' : p.goalDiff < 0 ? 'text-rose-400' : 'text-slate-400'}">${p.goalDiff > 0 ? '+' + p.goalDiff : p.goalDiff}</td>
+                    <td class="py-3 px-3 text-center text-slate-300">${p.avgPossession}%</td>
+                    <td class="py-3 px-3 text-center text-slate-300">${p.avgShots}개</td>
+                    <td class="py-3 px-4 text-center text-slate-300">${p.avgPassRate}%</td>
+                </tr>
+            `).join('');
+        }
+
+        // Participants Management
+        function renderParticipants() {
+            document.getElementById('participantCountBadge').innerText = participants.length + '명';
+            const container = document.getElementById('participantsListContainer');
+            
+            if (participants.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">등록된 참가자가 없습니다.</p>`;
+                return;
+            }
+
+            container.innerHTML = participants.map(name => `
+                <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-sm">
+                    <span class="font-semibold text-white"><i class="fa-solid fa-user text-fcblue mr-2 text-xs"></i>${name}</span>
+                    <button onclick="removeParticipant('${name}')" class="text-rose-400 hover:text-rose-300 text-xs px-2 py-1"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            `).join('');
+        }
+
+        function addParticipant(e) {
+            e.preventDefault();
+            const input = document.getElementById('newParticipantName');
+            const name = input.value.trim();
+            if (name && !participants.includes(name)) {
+                participants.push(name);
+                input.value = '';
+                saveData();
+                showToast(`참가자 '${name}'님이 등록되었습니다.`);
+            } else {
+                alert("이미 존재하거나 올바르지 않은 닉네임입니다.");
+            }
+        }
+
+        function removeParticipant(name) {
+            if (confirm(`'${name}' 참가자를 삭제하시겠습니까?`)) {
+                participants = participants.filter(p => p !== name);
+                saveData();
+                showToast("참가자가 삭제되었습니다.");
+            }
+        }
+
+        // Tournament Standings
+        function renderTournamentStandings() {
+            const statsMap = calculatePlayerStatsData();
+            const tbody = document.getElementById('tournamentStandingsBody');
+            
+            let arr = Object.values(statsMap);
+            // Points: Win = 3pts, Draw = 1pt
+            arr.forEach(p => {
+                p.points = (p.wins * 3) + (p.draws * 1);
+            });
+
+            arr.sort((a, b) => {
+                if (b.points !== a.points) return b.points - a.points;
+                if (b.goalDiff !== a.goalDiff) return b.goalDiff - a.goalDiff;
+                return b.goalsFor - a.goalsFor;
+            });
+
+            if (arr.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-slate-500">순위 데이터가 없습니다.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = arr.map((p, idx) => `
+                <tr class="hover:bg-slate-800/40">
+                    <td class="py-2.5 px-3 font-bold text-slate-400">${idx + 1}</td>
+                    <td class="py-2.5 px-3 font-bold text-white">${p.name}</td>
+                    <td class="py-2.5 px-3 text-center text-slate-300">${p.matches}</td>
+                    <td class="py-2.5 px-3 text-center font-bold text-fccyan">${p.points}점</td>
+                    <td class="py-2.5 px-3 text-center ${p.goalDiff > 0 ? 'text-emerald-400' : p.goalDiff < 0 ? 'text-rose-400' : 'text-slate-400'}">${p.goalDiff > 0 ? '+' + p.goalDiff : p.goalDiff}</td>
+                </tr>
+            `).join('');
+        }
+
+        function updateTournamentTitle() {
+            const titleInput = document.getElementById('editTournamentTitle').value.trim();
+            if (titleInput) {
+                tournamentTitle = titleInput;
+                document.getElementById('dash-tournament-title').innerText = tournamentTitle;
+                saveData();
+                showToast("대회 타이틀이 수정되었습니다.");
+            }
+        }
+
+        // Data Backup & Restore (JSON)
+        function exportData() {
+            const data = {
+                tournamentTitle,
+                matches,
+                participants
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `fconline_tournament_backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast("대회 데이터가 JSON 파일로 백업되었습니다.");
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed.matches && parsed.participants) {
+                        matches = parsed.matches;
+                        participants = parsed.participants;
+                        if (parsed.tournamentTitle) {
+                            tournamentTitle = parsed.tournamentTitle;
+                            document.getElementById('editTournamentTitle').value = tournamentTitle;
+                            document.getElementById('dash-tournament-title').innerText = tournamentTitle;
+                        }
+                        saveData();
+                        showToast("데이터가 성공적으로 복원되었습니다!");
+                    } else {
+                        alert("올바르지 않은 백업 파일 형식입니다.");
+                    }
+                } catch (err) {
+                    alert("JSON 파일을 파싱하는 중 오류가 발생했습니다.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function resetAllDataModal() {
+            if (confirm("경고: 모든 경기 기록 및 참가자 데이터가 초기화됩니다. 계속하시겠습니까?")) {
+                localStorage.clear();
+                matches = [];
+                participants = [];
+                tournamentTitle = DEFAULT_TOURNAMENT_TITLE;
+                document.getElementById('editTournamentTitle').value = tournamentTitle;
+                document.getElementById('dash-tournament-title').innerText = tournamentTitle;
+                saveData();
+                showToast("모든 데이터가 초기화되었습니다.");
+            }
+        }
+
+        // Image Viewer Modal Helper
+        function openImageViewer(imgSrc) {
+            const modal = document.createElement('div');
+            modal.className = "fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4";
+            modal.innerHTML = `
+                <div class="relative max-w-4xl w-full glass-panel p-4 rounded-2xl border border-fcborder text-center">
+                    <button onclick="this.closest('.fixed').remove()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl font-bold bg-slate-800 w-8 h-8 rounded-full flex items-center justify-center">×</button>
+                    <img src="${imgSrc}" class="max-h-[80vh] mx-auto rounded-lg object-contain mt-2">
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+    </script>
+</body>
+</html>
